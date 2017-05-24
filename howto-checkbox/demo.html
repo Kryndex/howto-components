@@ -1,0 +1,114 @@
+<!--
+Copyright 2017 Google Inc. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!doctype html>
+<style>
+  howto-checkbox {
+    display: inline-block;
+    background: url('.././images/unchecked-checkbox.svg') no-repeat;
+    background-size: contain;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+  }
+
+  howto-checkbox[aria-checked="true"] {
+    background: url('.././images/checked-checkbox.svg') no-repeat;
+    background-size: contain;
+  }
+
+  howto-checkbox[aria-disabled="true"] {
+    background: url('.././images/unchecked-checkbox-disabled.svg') no-repeat;
+    background-size: contain;
+  }
+
+  howto-checkbox[aria-checked="true"][aria-disabled="true"] {
+    background: url('.././images/checked-checkbox-disabled.svg') no-repeat;
+    background-size: contain;
+  }
+
+  #join-label {
+    vertical-align: middle;
+    display: inline-block;
+    font-weight: bold;
+    font-family: sans-serif;
+    font-size: 20px;
+    margin-left: 8px;
+  }
+</style>
+
+<howto-checkbox aria-labelledby="join-label"></howto-checkbox>
+<span id="join-label">Join Newsletter</span>
+
+
+<script>
+  (function() {
+    // Loads a script asynchronously and returns a promise that resolves when
+    // when the script has loaded.
+    function loadScript(src) {
+      return new Promise(resolve => {
+        const s = document.createElement('script');
+        s.onload = resolve;
+        s.src = src;
+        document.head.appendChild(s);
+      });
+    }
+
+    // Sends a message to the parent window with the current size of document.
+    // If this page is embedded in an iframe, the parent page has the choice
+    // to adapt the size of the iframe to accommodate the contents.
+    function sendSize() {
+      if(window.parent === window) return;
+      window.parent.postMessage(document.documentElement.getBoundingClientRect().height, '*');
+    }
+
+    // The parents window can query the iframe’s document size at any time by
+    // sending any message.
+    window.addEventListener('message', sendSize);
+
+    window._loadJavaScript = _ => {
+      const whenScriptsLoaded = [
+        '../scripts/custom-elements.min.js',
+        '../scripts/shadydom.min.js',
+        'howto-checkbox.js',
+      ].reduce((chain, src) =>
+        chain.then(_ => loadScript(src)),
+        Promise.resolve()
+      );
+      return whenScriptsLoaded
+        .then(_ => customElements.whenDefined('howto-checkbox'))
+        .then(_ => sendSize());
+    };
+
+    // If there’s a `nojs` in the URL’s query string, don’t load the elements,
+    // somewhat emulating disabled JavaScript.
+    if (!document.location.search.includes('nojs')) {
+      _loadJavaScript();
+    }
+
+    // Hook up ResizeObserver for dynamic size adjustments
+    loadScript('../scripts/resizeobserver.min.js')
+      .then(_ => {
+        const ResizeObserver =
+          self.ResizeObserver || self.ResizeObserverPolyfill;
+        const ro = new ResizeObserver(_ => sendSize());
+        // One of them’s gotta be the right one, right?
+        ro.observe(document.documentElement);
+        ro.observe(document.body);
+        ro.observe(document.scrollingElement);
+      });
+
+    // Send size after loading is done
+    requestAnimationFrame(_ => sendSize());
+  })();
+</script>
+</html>

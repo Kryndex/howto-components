@@ -1,0 +1,121 @@
+<!--
+Copyright 2017 Google Inc. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!doctype html>
+<style>
+  howto-radio-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-left: 10px;
+  }
+
+  howto-radio-button {
+    display: inline-block;
+    position: relative;
+    cursor: default;
+  }
+
+  howto-radio-button:focus {
+    outline: 0;
+  }
+
+  howto-radio-button:focus::before {
+    box-shadow: 0 0 1px 2px #5B9DD9;
+  }
+
+  howto-radio-button::before {
+    content: '';
+    display: block;
+    width: 10px;
+    height: 10px;
+    border: 1px solid black;
+    position: absolute;
+    left: -18px;
+    top: 3px;
+    border-radius: 50%;
+  }
+
+  howto-radio-button[aria-checked="true"]::before {
+    background: red;
+  }
+</style>
+
+<howto-radio-group>
+  <howto-radio-button>Water</howto-radio-button>
+  <howto-radio-button>Soda</howto-radio-button>
+  <howto-radio-button>Coffee</howto-radio-button>
+</howto-radio-group>
+
+
+<script>
+  (function() {
+    // Loads a script asynchronously and returns a promise that resolves when
+    // when the script has loaded.
+    function loadScript(src) {
+      return new Promise(resolve => {
+        const s = document.createElement('script');
+        s.onload = resolve;
+        s.src = src;
+        document.head.appendChild(s);
+      });
+    }
+
+    // Sends a message to the parent window with the current size of document.
+    // If this page is embedded in an iframe, the parent page has the choice
+    // to adapt the size of the iframe to accommodate the contents.
+    function sendSize() {
+      if(window.parent === window) return;
+      window.parent.postMessage(document.documentElement.getBoundingClientRect().height, '*');
+    }
+
+    // The parents window can query the iframe’s document size at any time by
+    // sending any message.
+    window.addEventListener('message', sendSize);
+
+    window._loadJavaScript = _ => {
+      const whenScriptsLoaded = [
+        '../scripts/custom-elements.min.js',
+        '../scripts/shadydom.min.js',
+        'howto-radio-group.js',
+      ].reduce((chain, src) =>
+        chain.then(_ => loadScript(src)),
+        Promise.resolve()
+      );
+      return whenScriptsLoaded
+        .then(_ => customElements.whenDefined('howto-radio-group'))
+        .then(_ => sendSize());
+    };
+
+    // If there’s a `nojs` in the URL’s query string, don’t load the elements,
+    // somewhat emulating disabled JavaScript.
+    if (!document.location.search.includes('nojs')) {
+      _loadJavaScript();
+    }
+
+    // Hook up ResizeObserver for dynamic size adjustments
+    loadScript('../scripts/resizeobserver.min.js')
+      .then(_ => {
+        const ResizeObserver =
+          self.ResizeObserver || self.ResizeObserverPolyfill;
+        const ro = new ResizeObserver(_ => sendSize());
+        // One of them’s gotta be the right one, right?
+        ro.observe(document.documentElement);
+        ro.observe(document.body);
+        ro.observe(document.scrollingElement);
+      });
+
+    // Send size after loading is done
+    requestAnimationFrame(_ => sendSize());
+  })();
+</script>
+</html>
